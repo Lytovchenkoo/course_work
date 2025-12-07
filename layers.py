@@ -28,12 +28,17 @@ class LayerManager:
         w, h = self.layers[0]['image'].size
         layer_img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         layer_img.paste(content_image, position, content_image)
+
+        ### FIX — тепер назви "Вставка X" збільшуються
         self.add_layer(layer_img, name=f"Вставка {self.layer_counter}")
+        self.layer_counter += 1
+        ### END FIX
 
     def remove_active_layer(self):
         if len(self.layers) > 1 and self.active_index > 0:
             self.layers.pop(self.active_index)
-            if self.active_index >= len(self.layers): self.active_index = len(self.layers) - 1
+            if self.active_index >= len(self.layers): 
+                self.active_index = len(self.layers) - 1
 
     def get_active_layer(self):
         if 0 <= self.active_index < len(self.layers):
@@ -50,22 +55,29 @@ class LayerManager:
 
     def select_layer_by_gui_index(self, gui_index):
         real_index = len(self.layers) - 1 - gui_index
-        if 0 <= real_index < len(self.layers): self.active_index = real_index
+        if 0 <= real_index < len(self.layers): 
+            self.active_index = real_index
 
-    def set_drawing_color(self, color): self.current_color = color
-    def get_drawing_color(self): return self.current_color
-    def set_brush_size(self, size): self.brush_radius = size
+    def set_drawing_color(self, color): 
+        self.current_color = color
+    def get_drawing_color(self): 
+        return self.current_color
+    def set_brush_size(self, size): 
+        self.brush_radius = size
 
     def resize_all(self, w, h, resample):
-        for l in self.layers: l['image'] = l['image'].resize((w, h), resample)
+        for l in self.layers: 
+            l['image'] = l['image'].resize((w, h), resample)
         self.original_background = self.original_background.resize((w, h), resample)
 
     def rotate_all(self, angle, expand=True):
-        for l in self.layers: l['image'] = l['image'].rotate(angle, expand=expand)
+        for l in self.layers: 
+            l['image'] = l['image'].rotate(angle, expand=expand)
         self.original_background = self.original_background.rotate(angle, expand=expand)
 
     def mirror_all(self):
-        for l in self.layers: l['image'] = ImageOps.mirror(l['image'])
+        for l in self.layers: 
+            l['image'] = ImageOps.mirror(l['image'])
         self.original_background = ImageOps.mirror(self.original_background)
 
     def draw_on_active_layer(self, position, erase=False):
@@ -80,9 +92,12 @@ class LayerManager:
         
         if erase:
             if self.active_index == 0:
-                x1, y1 = start; x2, y2 = end
-                left = int(max(0, min(x1, x2) - r*2)); top = int(max(0, min(y1, y2) - r*2))
-                right = int(min(layer['image'].width, max(x1, x2) + r*2)); bottom = int(min(layer['image'].height, max(y1, y2) + r*2))
+                x1, y1 = start
+                x2, y2 = end
+                left = int(max(0, min(x1, x2) - r*2))
+                top = int(max(0, min(y1, y2) - r*2))
+                right = int(min(layer['image'].width, max(x1, x2) + r*2))
+                bottom = int(min(layer['image'].height, max(y1, y2) + r*2))
                 if right <= left or bottom <= top: return
 
                 w_box, h_box = right - left, bottom - top
@@ -107,7 +122,6 @@ class LayerManager:
                     draw.ellipse([end[0]-r, end[1]-r, end[0]+r, end[1]+r], fill=0)
                     layer['image'].putalpha(alpha)
         else:
-            # === МАЛЮВАННЯ ===
             draw = ImageDraw.Draw(layer['image'])
             draw.line([start, end], fill=self.current_color, width=width)
             draw.ellipse([start[0]-r, start[1]-r, start[0]+r, start[1]+r], fill=self.current_color)
@@ -115,7 +129,6 @@ class LayerManager:
 
     def get_composite(self):
         w, h = self.layers[0]['image'].size
-        # Біла підкладка
         composite = Image.new("RGBA", (w, h), (255, 255, 255, 255))
         for layer in self.layers:
             if layer['visible']:

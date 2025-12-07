@@ -15,7 +15,7 @@ from filters import *
 # --- ФУНКЦІЇ ---
 def image_to_data(image: Image.Image):
     bio = io.BytesIO()
-    image.save(bio, format="PNG") 
+    image.save(bio, format="PNG")
     return bio.getvalue()
 
 def update_ui_layers():
@@ -24,11 +24,12 @@ def update_ui_layers():
         window["-LAYER_LIST-"].update(names)
 
 def get_display_image():
-    if not layer_manager: return None
+    if not layer_manager:
+        return None
     base = layer_manager.get_composite()
-    if floating_object and floating_object['image']:
+    if floating_object and floating_object.get('image'):
         temp = Image.new("RGBA", base.size, (0,0,0,0))
-        temp.paste(floating_object['image'], (floating_object['x'], floating_object['y']))
+        temp.paste(floating_object['image'], (floating_object['x'], floating_object['y']), floating_object['image'])
         base = Image.alpha_composite(base, temp)
     return base
 
@@ -39,19 +40,24 @@ def update_canvas():
         if img:
             window['-GRAPH-'].erase()
             window['-GRAPH-'].draw_image(data=image_to_data(img), location=(0, 0))
-    except: pass
+    except Exception:
+        pass
 
 def commit_floating_object():
     global floating_object
     if floating_object and layer_manager:
-        layer_manager.add_layer_with_content(floating_object['image'], 
-                                           (floating_object['x'], floating_object['y']))
+        layer_manager.add_layer_with_content(
+            floating_object['image'],
+            (floating_object['x'], floating_object['y'])
+        )
         floating_object = None
         update_ui_layers()
 
 def save_state():
-    if floating_object: commit_floating_object()
-    if not layer_manager: return
+    if floating_object:
+        commit_floating_object()
+    if not layer_manager:
+        return
     final = layer_manager.get_composite()
     history.add_state(final)
     update_ui_layers()
@@ -68,11 +74,14 @@ def apply_layer_filter(func, **kwargs):
                 processed = func(layer['image'], **kwargs)
                 if selection_tool.has_selection():
                     mask = selection_tool.create_mask(layer['image'].size)
-                    layer['image'] = Image.composite(processed, layer['image'], mask)
+                    if mask:
+                        layer['image'] = Image.composite(processed, layer['image'], mask)
                 else:
                     layer['image'] = processed
-                save_state(); update_canvas()
-    except: pass
+                save_state()
+                update_canvas()
+    except Exception:
+        pass
 
 def get_valid_float(prompt, default, min_val=0.0, max_val=10.0):
     while True:
@@ -99,19 +108,21 @@ eyedropper_tool = EyedropperTool()
 
 tool_mode = None
 last_pos = None
-clipboard = None
-floating_object = None 
+clipboard = None 
+floating_object = None
 drag_start = None
 
 while True:
     event, values = window.read(timeout=20)
-    if event in (sg.WIN_CLOSED, "Вихід"): break
+    if event in (sg.WIN_CLOSED, "Вихід"):
+        break
 
     mouse = values['-GRAPH-'] if values and '-GRAPH-' in values else (None, None)
 
+    # === Обробка миші ===
     if event == '-GRAPH-' and mouse != (None, None):
         x, y = mouse
-        
+
         # --- ТЕКСТ ---
         if tool_mode == 'TEXT' and layer_manager:
             layer = layer_manager.get_active_layer()
@@ -120,7 +131,7 @@ while True:
                 if text_tool.add_text(layer['image'], (x, y), current_color):
                     save_state()
                     update_canvas()
-                tool_mode = None 
+                tool_mode = None
 
         # --- ПІПЕТКА ---
         elif tool_mode == 'EYEDROPPER' and layer_manager:
@@ -133,10 +144,11 @@ while True:
                 tool_mode = None
                 sg.popup_quick_message(f"Обрано колір: {hex_c}")
 
-        # --- ПЕРЕМІЩЕННЯ ---
+        # --- ПЕРЕМІЩЕННЯ --- 
         elif tool_mode == 'MoveTool' and floating_object:
             if not drag_start:
-                drag_start = mouse; obj_start = (floating_object['x'], floating_object['y'])
+                drag_start = mouse
+                obj_start = (floating_object['x'], floating_object['y'])
             else:
                 dx, dy = x - drag_start[0], y - drag_start[1]
                 floating_object['x'] = obj_start[0] + dx
@@ -146,10 +158,10 @@ while True:
         # --- МАЛЮВАННЯ ---
         elif tool_mode in ['DRAW', 'ERASER'] and layer_manager:
             is_eraser = (tool_mode == 'ERASER')
-            
+
             if last_pos:
                 layer_manager.draw_on_active_layer_line(last_pos, (x, y), erase=is_eraser)
-                
+
                 if is_eraser:
                     update_canvas()
                 else:
@@ -161,29 +173,27 @@ while True:
             else:
                 layer_manager.draw_on_active_layer((x, y), erase=is_eraser)
                 if is_eraser: update_canvas()
-            
+
             last_pos = (x, y)
 
         # --- ВИДІЛЕННЯ ---
         elif tool_mode in ['RECT', 'ELLIPSE', 'LASSO']:
-            if not selection_tool.selecting: selection_tool.start_selection(mouse, tool_mode)
-            else: selection_tool.update_selection(mouse, window['-GRAPH-'])
+            if not selection_tool.selecting:
+                selection_tool.start_selection(mouse, tool_mode)
+            else:
+                selection_tool.update_selection(mouse, window['-GRAPH-'])
 
-    # === КОЛИ МИША ВІДПУЩЕНА АБО НЕ РУХАЄТЬСЯ ===
     elif event != '-GRAPH-':
         if last_pos:
             last_pos = None
-            if tool_mode == 'DRAW': 
-                pass 
-        
+
         drag_start = None
-        
-        # Завершуємо виділення
+
         if tool_mode in ['RECT', 'ELLIPSE', 'LASSO'] and selection_tool.selecting:
             selection_tool.finish_selection(window['-GRAPH-'])
 
-    # === КНОПКИ ТА ІНСТРУМЕНТИ ===
-    if event == "Почати малювання": 
+    # === UI Кнопки ===
+    if event == "Почати малювання":
         if floating_object: save_state()
         if layer_manager and layer_manager.active_index == 0:
              layer_manager.add_layer(name="Малювання")
@@ -201,13 +211,13 @@ while True:
     elif event == "EraserTool":
         if floating_object: save_state()
         tool_mode = 'ERASER'; sg.popup_quick_message("Стирачка")
-    
-    elif event == "Піпетка": 
+
+    elif event == "Піпетка":
         tool_mode = 'EYEDROPPER'
         eyedropper_tool.activate()
         sg.popup_quick_message("Піпетка: Натисніть на колір")
 
-    elif event == "Текст": 
+    elif event == "Текст":
         tool_mode = 'TEXT'
         sg.popup_quick_message("Текст: Натисніть на місце вставки")
 
@@ -224,65 +234,136 @@ while True:
         if img:
             cw, ch = 800, 600
             if img.width > cw or img.height > ch:
-                ratio = min(cw/img.width, ch/img.height)
-                img = img.resize((int(img.width*ratio), int(img.height*ratio)), Image.Resampling.LANCZOS)
+                ratio = min(cw / img.width, ch / img.height)
+                img = img.resize((int(img.width * ratio), int(img.height * ratio)), Image.Resampling.LANCZOS)
             layer_manager = LayerManager(img)
-            history = History(); history.add_state(img.convert("RGBA"))
-            floating_object = None; update_ui_layers(); update_canvas()
+            history = History()
+            history.add_state(img.convert("RGBA"))
+            floating_object = None
+            update_ui_layers()
+            update_canvas()
 
     if event == "-BRUSH_SIZE-" and layer_manager:
         layer_manager.set_brush_size(int(values['-BRUSH_SIZE-']))
 
-    if event == "Додати шар" and layer_manager: layer_manager.add_layer(); update_ui_layers()
-    elif event == "Видалити шар" and layer_manager: layer_manager.remove_active_layer(); save_state(); update_canvas()
+    if event == "Додати шар" and layer_manager:
+        layer_manager.add_layer()
+        update_ui_layers()
+    elif event == "Видалити шар" and layer_manager:
+        layer_manager.remove_active_layer()
+        save_state()
+        update_canvas()
     elif event == "ToggleVis" and layer_manager:
         l = layer_manager.get_active_layer()
-        if l: l['visible'] = not l['visible']; update_ui_layers(); update_canvas()
+        if l:
+            l['visible'] = not l['visible']
+            update_ui_layers()
+            update_canvas()
     elif event == "-LAYER_LIST-" and layer_manager:
         idxs = window["-LAYER_LIST-"].get_indexes()
-        if idxs: layer_manager.select_layer_by_gui_index(idxs[0]); update_ui_layers()
+        if idxs:
+            layer_manager.select_layer_by_gui_index(idxs[0])
+            update_ui_layers()
 
+    # === COPY / CUT / PASTE ===
     if event == "Copy" and selection_tool.has_selection() and layer_manager:
+        clipboard = None
         l = layer_manager.get_active_layer()
         if l:
-            mask = selection_tool.create_mask(l['image'].size)
-            bbox = mask.getbbox()
-            if bbox: clipboard = l['image'].crop(bbox); clipboard.putalpha(mask.crop(bbox)); sg.popup_quick_message("Скопійовано!")
+            base = l['image'].convert("RGBA")
+            mask = selection_tool.create_mask(base.size)
+            if mask is None:
+                sg.popup_quick_message("Немає валідної маски")
+            else:
+                empty = Image.new("RGBA", base.size, (0,0,0,0))
+                rgba_sel = Image.composite(base, empty, mask)
+                bbox = mask.getbbox()
+                if bbox:
+                    clipboard = rgba_sel.crop(bbox)
+                    sg.popup_quick_message("Скопійовано!")
 
     elif event == "Cut" and selection_tool.has_selection() and layer_manager:
+        clipboard = None
         l = layer_manager.get_active_layer()
         if l:
-            mask = selection_tool.create_mask(l['image'].size)
-            bbox = mask.getbbox()
-            if bbox:
-                clipboard = l['image'].crop(bbox); clipboard.putalpha(mask.crop(bbox))
-                empty = Image.new("RGBA", l['image'].size, (0,0,0,0))
-                l['image'] = Image.composite(empty, l['image'], mask)
-                selection_tool.clear_selection(window['-GRAPH-'])
-                save_state(); update_canvas(); sg.popup_quick_message("Вирізано!")
+            base = l['image'].convert("RGBA")
+            mask = selection_tool.create_mask(base.size)
+            if mask is None:
+                sg.popup_quick_message("Немає валідної маски")
+            else:
+                empty = Image.new("RGBA", base.size, (0,0,0,0))
+                rgba_sel = Image.composite(base, empty, mask)
+                bbox = mask.getbbox()
+                if bbox:
+                    clipboard = rgba_sel.crop(bbox)
+                    # видаляємо область з оригінального шару (ставимо прозоре)
+                    l['image'] = Image.composite(empty, base, mask)
+                    selection_tool.clear_selection(window['-GRAPH-'])
+                    save_state()
+                    update_canvas()
+                    sg.popup_quick_message("Вирізано!")
 
     elif event == "Paste" and clipboard and layer_manager:
-        if floating_object: commit_floating_object()
+        if floating_object:
+            commit_floating_object()
         w, h = layer_manager.layers[0]['image'].size
-        floating_object = {'image': clipboard.copy(), 'x': (w-clipboard.width)//2, 'y': (h-clipboard.height)//2}
-        tool_mode = 'MoveTool'; selection_tool.clear_selection(window['-GRAPH-'])
-        update_canvas(); sg.popup_quick_message("Вставлено!")
+        floating_object = {
+            'image': clipboard.copy(),
+            'x': (w - clipboard.width) // 2,
+            'y': (h - clipboard.height) // 2
+        }
+        tool_mode = 'MoveTool'
+        selection_tool.clear_selection(window['-GRAPH-'])
+        update_canvas()
+        sg.popup_quick_message("Вставлено!")
 
     elif event == "AnchorObject":
-        if floating_object: save_state(); update_canvas(); sg.popup_quick_message("Зафіксовано")
+        if floating_object:
+            save_state()
+            update_canvas()
+            sg.popup_quick_message("Зафіксовано")
 
+    # Інструменти виділення
     if event in ["SelectRect", "SelectEllipse", "SelectLasso"]:
-        tool_mode = {'SelectRect':'RECT', 'SelectEllipse':'ELLIPSE', 'SelectLasso':'LASSO'}[event]; selection_tool.active = True
-    elif event == "Скасувати виділення": selection_tool.clear_selection(window['-GRAPH-']); update_canvas()
+        tool_mode = {'SelectRect':'RECT', 'SelectEllipse':'ELLIPSE', 'SelectLasso':'LASSO'}[event]
+        selection_tool.active = True
+    elif event == "Скасувати виділення":
+        selection_tool.clear_selection(window['-GRAPH-'])
+        update_canvas()
     elif event == "DeleteArea" and layer_manager:
-        if floating_object: floating_object = None; update_canvas()
+        if floating_object:
+            floating_object = None
+            update_canvas()
         elif selection_tool.has_selection():
             l = layer_manager.get_active_layer()
-            mask = selection_tool.create_mask(l['image'].size)
-            empty = Image.new("RGBA", l['image'].size, (0,0,0,0))
-            l['image'] = Image.composite(empty, l['image'], mask)
-            selection_tool.clear_selection(window['-GRAPH-']); save_state(); update_canvas()
+            base = l['image'].convert("RGBA")
+            mask = selection_tool.create_mask(base.size)
+            if mask:
+                empty = Image.new("RGBA", base.size, (0,0,0,0))
+                l['image'] = Image.composite(empty, base, mask)
+                selection_tool.clear_selection(window['-GRAPH-'])
+                save_state()
+                update_canvas()
 
+    # --- CROP ---
+    if event == "CropSelection" and selection_tool.has_selection() and layer_manager:
+        l = layer_manager.get_active_layer()
+        if l:
+            base = l['image'].convert("RGBA")
+            mask = selection_tool.create_mask(base.size)
+            if mask:
+                empty = Image.new("RGBA", base.size, (0,0,0,0))
+                rgba_sel = Image.composite(base, empty, mask)
+                bbox = mask.getbbox()
+                if bbox:
+                    cropped = rgba_sel.crop(bbox)
+                    l['image'] = cropped
+                    selection_tool.clear_selection(window["-GRAPH-"])
+                    save_state()
+                    update_canvas()
+                    sg.popup_quick_message("Обрізано!")
+
+    # ФІЛЬТРИ
     if layer_manager:
         if event == "Яскравість+": apply_layer_filter(adjust_brightness, factor=1.1)
         elif event == "Яскравість-": apply_layer_filter(adjust_brightness, factor=0.9)
@@ -297,6 +378,7 @@ while True:
             r = get_valid_float("Червоний канал", 1.0); b = get_valid_float("Синій", 1.0)
             if r and b: apply_layer_filter(adjust_color_balance, r=r, g=1.0, b=b)
 
+    # Операції (обертання/дзеркало/ресайз)
     if event == "Обернути" and layer_manager:
         if floating_object: floating_object['image'] = floating_object['image'].rotate(-90, expand=True); update_canvas()
         else: layer_manager.rotate_all(-90, expand=True); save_state(); update_canvas()
@@ -307,16 +389,29 @@ while True:
         t = layer_manager.layers[0]['image']
         w = get_valid_int(f"Ширина ({t.width}):", t.width)
         if w:
-            ratio = w/t.width; h=int(t.height*ratio)
-            layer_manager.resize_all(w, h, Image.Resampling.LANCZOS); save_state(); update_canvas()
+            ratio = w / t.width
+            h = int(t.height * ratio)
+            layer_manager.resize_all(w, h, Image.Resampling.LANCZOS)
+            save_state()
+            update_canvas()
 
+    # Undo / Redo
     if event == "Undo":
         img = history.undo()
-        if img: layer_manager = LayerManager(img); floating_object = None; update_ui_layers(); update_canvas()
+        if img:
+            layer_manager = LayerManager(img)
+            floating_object = None
+            update_ui_layers()
+            update_canvas()
     elif event == "Redo":
         img = history.redo()
-        if img: layer_manager = LayerManager(img); floating_object = None; update_ui_layers(); update_canvas()
+        if img:
+            layer_manager = LayerManager(img)
+            floating_object = None
+            update_ui_layers()
+            update_canvas()
 
+    # Save as
     if event == "Зберегти як" and layer_manager:
         if floating_object: commit_floating_object()
         path = sg.popup_get_file("Зберегти", save_as=True, no_window=True, file_types=(("PNG", "*.png"), ("JPG", "*.jpg")))

@@ -16,7 +16,7 @@ class TextTool:
             [sg.Text("Розмір:"), sg.Slider((8, 200), default_value=40, orientation='h', key='-SIZE-')],
             [sg.Text("Шрифт:"), sg.Combo(fonts, default_value='Arial', key='-FONT-')],
             [sg.Text("Колір:", size=(6, 1)), sg.Input(default_text=hex_color, size=(10, 1), key='-COLOR-'), 
-             sg.ColorChooserButton("🎨", target='-COLOR-', button_color=('white', '#333333'))],
+            sg.ColorChooserButton("🎨", target='-COLOR-', button_color=('white', '#333333'))],
             [sg.HorizontalSeparator()],
             [sg.Button("Додати текст", bind_return_key=True), sg.Button("Скасувати")]
         ]
@@ -40,7 +40,7 @@ class TextTool:
             font = None
             try:
                 font_files = {'Arial': 'arial.ttf', 'Times New Roman': 'times.ttf', 
-                              'Verdana': 'verdana.ttf', 'Courier New': 'cour.ttf', 'Segoe UI': 'segoeui.ttf'}
+                    'Verdana': 'verdana.ttf', 'Courier New': 'cour.ttf', 'Segoe UI': 'segoeui.ttf'}
                 font_file = font_files.get(font_name, 'arial.ttf')
                 
                 if platform.system() == "Windows":

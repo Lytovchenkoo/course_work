@@ -6,6 +6,7 @@ class LayerManager:
         base = base_image.convert("RGBA")
         self.original_background = base.copy()
         
+        # Список шарів
         self.layers = [
             {'name': 'Фон', 'image': base, 'visible': True, 'opacity': 1.0}
         ]
@@ -29,10 +30,8 @@ class LayerManager:
         layer_img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         layer_img.paste(content_image, position, content_image)
 
-        ### FIX — тепер назви "Вставка X" збільшуються
         self.add_layer(layer_img, name=f"Вставка {self.layer_counter}")
         self.layer_counter += 1
-        ### END FIX
 
     def remove_active_layer(self):
         if len(self.layers) > 1 and self.active_index > 0:
@@ -92,6 +91,7 @@ class LayerManager:
         
         if erase:
             if self.active_index == 0:
+                # Логіка для фону: відновлюємо з оригіналу
                 x1, y1 = start
                 x2, y2 = end
                 left = int(max(0, min(x1, x2) - r*2))
@@ -114,6 +114,7 @@ class LayerManager:
                 layer['image'].paste(restored, (left, top))
             
             else:
+                # Логіка для прозорих шарів: малюємо прозорістю (alpha=0)
                 if layer['image'].mode == 'RGBA':
                     r_ch, g_ch, b_ch, alpha = layer['image'].split()
                     draw = ImageDraw.Draw(alpha)

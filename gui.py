@@ -4,14 +4,19 @@ import PySimpleGUI as sg
 sg.theme('DarkGrey13')
 
 def create_main_window(image_size=(800, 600)):
+    """
+    Створює об'єкт вікна з усіма панелями та інструментами.
+    """
     icon_font = ("Segoe UI Emoji", 20)
     icon_bg = "#1e293b"
     
+    # Допоміжна функція для створення кнопок-іконок
     def icon_btn(text, key, tooltip):
         return sg.Text(text, font=icon_font, background_color=icon_bg, 
-                       text_color="#e2e8f0", key=key, enable_events=True, 
-                       tooltip=tooltip, pad=(5, 5))
+            text_color="#e2e8f0", key=key, enable_events=True, 
+            tooltip=tooltip, pad=(5, 5))
 
+    # Верхня панель (Файл, Трансформації)
     top_panel = [
         icon_btn("📁", "Відкрити файл", "Відкрити"),
         icon_btn("💾", "Зберегти як", "Зберегти"),
@@ -25,6 +30,7 @@ def create_main_window(image_size=(800, 600)):
         icon_btn("🚪", "Вихід", "Вихід")
     ]
 
+    # Ліва панель (Фільтри, Шари)
     left_panel = sg.Column([
         [sg.Text("КОРЕКЦІЯ", font=("Arial", 9, "bold"), background_color=icon_bg, text_color="#94a3b8")],
         [icon_btn("☀️", "Яскравість+", "Більше яскравості"), icon_btn("🌑", "Яскравість-", "Менше яскравості")],
@@ -38,20 +44,20 @@ def create_main_window(image_size=(800, 600)):
         [sg.Listbox(values=[], size=(18, 6), key="-LAYER_LIST-", enable_events=True, 
                     font=("Consolas", 10), background_color="#0f172a", text_color="white", no_scrollbar=True)],
         [icon_btn("➕", "Додати шар", "Новий шар"), icon_btn("➖", "Видалити шар", "Видалити активний"), 
-         icon_btn("👁️", "ToggleVis", "Сховати/Показати шар")]
+        icon_btn("👁️", "ToggleVis", "Сховати/Показати шар")]
     ], background_color=icon_bg, pad=(5, 5))
 
+    # Права панель (Інструменти)
     right_panel = sg.Column([
         [sg.Text("ІНСТРУМЕНТИ", font=("Arial", 9, "bold"), background_color=icon_bg, text_color="#94a3b8")],
-        # ВАЖЛИВО: Кнопки СТАРТ і СТОП для малювання
         [icon_btn("🖌️", "Почати малювання", "Пензлик"), icon_btn("⏹️", "Завершити малювання", "Зберегти фігуру (Стоп)")],
         [icon_btn("🧹", "EraserTool", "Стирачка"), icon_btn("✋", "MoveTool", "Переміщення")],
         
         [sg.Text("Розмір:", font=("Arial", 8), background_color=icon_bg, text_color="white"),
-         sg.Slider(range=(1, 50), default_value=5, orientation='h', size=(10, 10), key='-BRUSH_SIZE-', enable_events=True, background_color=icon_bg)],
+        sg.Slider(range=(1, 50), default_value=5, orientation='h', size=(10, 10), key='-BRUSH_SIZE-', enable_events=True, background_color=icon_bg)],
         
         [icon_btn("💧", "Піпетка", "Піпетка"), 
-         sg.Button("🎨", key="ChooseColor", button_color=(icon_bg, icon_bg), border_width=0, font=icon_font, tooltip="Палітра")],
+        sg.Button("🎨", key="ChooseColor", button_color=(icon_bg, icon_bg), border_width=0, font=icon_font, tooltip="Палітра")],
 
         [icon_btn("🅰️", "Текст", "Текст")],
         [sg.HorizontalSeparator(color="#475569")],
@@ -69,7 +75,7 @@ def create_main_window(image_size=(800, 600)):
         [icon_btn("↶", "Undo", "Скасувати"), icon_btn("↷", "Redo", "Повернути")]
     ], background_color=icon_bg, pad=(5, 5))
 
-    # drag_submits=True - ВАЖЛИВО ДЛЯ ПЛАВНОСТІ
+    # Основне полотно
     graph = sg.Graph(
         canvas_size=image_size,
         graph_bottom_left=(0, image_size[1]),
@@ -77,7 +83,7 @@ def create_main_window(image_size=(800, 600)):
         background_color='#0f172a',
         key='-GRAPH-',
         enable_events=True,
-        drag_submits=True,
+        drag_submits=True, # Важливо для відстеження руху миші з затиснутою кнопкою
         motion_events=True,
         pad=(0,0)
     )

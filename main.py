@@ -12,18 +12,25 @@ from selection_tool import SelectionTool
 from text_tool import TextTool
 from filters import *
 
-# --- ФУНКЦІЇ ---
+# --- ДОПОМІЖНІ ФУНКЦІЇ ---
+
 def image_to_data(image: Image.Image):
+    """Конвертує PIL Image у байти PNG для відображення в GUI."""
     bio = io.BytesIO()
     image.save(bio, format="PNG")
     return bio.getvalue()
 
 def update_ui_layers():
+    """Оновлює список шарів у інтерфейсі."""
     if layer_manager:
         names = layer_manager.get_layer_names()
         window["-LAYER_LIST-"].update(names)
 
 def get_display_image():
+    """
+    Формує фінальне зображення для екрану:
+    композит шарів + тимчасові об'єкти (плаваючі вставки).
+    """
     if not layer_manager:
         return None
     base = layer_manager.get_composite()
@@ -34,7 +41,7 @@ def get_display_image():
     return base
 
 def update_canvas():
-    """Повне оновлення екрану"""
+    """Перемальовує полотно (Graph)."""
     try:
         img = get_display_image()
         if img:
@@ -44,6 +51,7 @@ def update_canvas():
         pass
 
 def commit_floating_object():
+    """Перетворює плаваючий об'єкт (вставку) на новий шар."""
     global floating_object
     if floating_object and layer_manager:
         layer_manager.add_layer_with_content(
@@ -54,6 +62,7 @@ def commit_floating_object():
         update_ui_layers()
 
 def save_state():
+    """Зберігає поточний стан в історію для Undo."""
     if floating_object:
         commit_floating_object()
     if not layer_manager:
@@ -63,6 +72,10 @@ def save_state():
     update_ui_layers()
 
 def apply_layer_filter(func, **kwargs):
+    """
+    Застосовує фільтр до активного шару або об'єкта.
+    Підтримує маскування через SelectionTool.
+    """
     global floating_object
     try:
         if floating_object:
@@ -84,6 +97,7 @@ def apply_layer_filter(func, **kwargs):
         pass
 
 def get_valid_float(prompt, default, min_val=0.0, max_val=10.0):
+    """Отримує дробове число від користувача."""
     while True:
         txt = sg.popup_get_text(f"{prompt} ({min_val}-{max_val})", default_text=str(default), keep_on_top=True)
         if txt is None: return None
@@ -94,6 +108,7 @@ def get_valid_float(prompt, default, min_val=0.0, max_val=10.0):
         except: sg.popup_error("Введіть число", keep_on_top=True)
 
 def get_valid_int(prompt, default):
+    """Отримує ціле число від користувача."""
     txt = sg.popup_get_text(prompt, default_text=str(default), keep_on_top=True)
     try: return int(txt)
     except: return None
